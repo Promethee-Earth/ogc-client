@@ -47,16 +47,16 @@ export function parseFeatureTypeInfo(
   )[0];
   const typeElementsEls = findChildrenElement(complexTypeEl, 'element', true);
   const properties = typeElementsEls
-    .filter((el) => getElementAttribute(el, 'type').startsWith('xsd:'))
-    .reduce(
-      (prev, curr) => ({
-        ...prev,
-        [getElementAttribute(curr, 'name')]: getTypeFromXsdType(
-          getElementAttribute(curr, 'type')
-        ),
-      }),
-      {}
-    );
+  .filter((el) => /^xsd:|^xs:/.test(getElementAttribute(el, 'type')))
+  .reduce(
+    (prev, curr) => ({
+      ...prev,
+      [getElementAttribute(curr, 'name')]: getTypeFromXsdType(
+        getElementAttribute(curr, 'type')
+      ),
+    }),
+    {}
+  );
 
   const geomEl = typeElementsEls.filter((el) =>
     getElementAttribute(el, 'type').startsWith('gml:')
