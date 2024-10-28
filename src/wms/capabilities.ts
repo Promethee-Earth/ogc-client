@@ -1,19 +1,46 @@
-import {
-  findChildElement,
-  findChildrenElement,
-  getElementAttribute,
-  getElementText,
-  getRootElement,
-} from '../shared/xml-utils.js';
-import { hasInvertedCoordinates } from '../shared/crs-utils.js';
 import { XmlDocument, XmlElement } from '@rgrove/parse-xml';
+import { hasInvertedCoordinates } from '../shared/crs-utils.js';
 import {
   BoundingBox,
   CrsCode,
   GenericEndpointInfo,
   LayerStyle,
+  type Provider,
+  type OperationName,
+  type OperationUrl,
 } from '../shared/models.js';
+import {
+  findChildElement,
+  findChildrenElement,
+  getChildrenElement,
+  getElementAttribute,
+  getElementName,
+  getElementText,
+  getRootElement,
+  stripNamespace,
+} from '../shared/xml-utils.js';
 import { WmsLayerAttribution, WmsLayerFull, WmsVersion } from './model.js';
+
+/**
+ * Will read all operation URLs from the capabilities doc
+ * @param capabilitiesDoc Capabilities document
+ * @return The parsed operations URLs
+ */
+export function readOperationUrlsFromCapabilities(
+  capabilitiesDoc: XmlDocument
+) {
+  const urls: Record<OperationName, OperationUrl> = {};
+  const capability = findChildElement(
+    getRootElement(capabilitiesDoc),
+    'Capability'
+  );
+  const request = findChildElement(capability, 'Request');
+  getChildrenElement(request).forEach((operation) => {
+    const operationName = stripNamespace(getElementName(operation));
+    urls[operationName] = parseOperation(operation);
+  });
+  return urls;
+}
 
 /**
  * Will read a WMS version from the capabilities doc
@@ -57,6 +84,40 @@ export function readOutputFormatsFromCapabilities(
   return outputFormats;
 }
 
+export function readInfoFormatsFromCapabilities(capabilitiesDoc: XmlDocument) {
+  const capability = findChildElement(
+    getRootElement(capabilitiesDoc),
+    'Capability'
+  );
+  const getFeatureInfo = findChildElement(
+    findChildElement(capability, 'Request'),
+    'GetFeatureInfo'
+  );
+  const outputFormats = findChildrenElement(getFeatureInfo, 'Format').map(
+    getElementText
+  );
+  return outputFormats;
+}
+
+/**
+ * Will return all available exception formats
+ * @param capabilitiesDoc Capabiliites document
+ * @return Available exception formats
+ */
+export function readExceptionFormatsFromCapabilities(
+  capabilitiesDoc: XmlDocument
+) {
+  const capability = findChildElement(
+    getRootElement(capabilitiesDoc),
+    'Capability'
+  );
+  const exception = findChildElement(capability, 'Exception');
+  const exceptionFormats = findChildrenElement(exception, 'Format').map(
+    getElementText
+  );
+  return exceptionFormats;
+}
+
 /**
  * Will read service-related info from the capabilities doc
  * @param capabilitiesDoc Capabilities document
@@ -66,23 +127,47 @@ export function readInfoFromCapabilities(
   capabilitiesDoc: XmlDocument
 ): GenericEndpointInfo {
   const service = findChildElement(getRootElement(capabilitiesDoc), 'Service');
-  const formats = readOutputFormatsFromCapabilities(capabilitiesDoc);
+  const outputFormats = readOutputFormatsFromCapabilities(capabilitiesDoc);
+  const infoFormats = readInfoFormatsFromCapabilities(capabilitiesDoc);
+  const exceptionFormats =
+    readExceptionFormatsFromCapabilities(capabilitiesDoc);
   const keywords = findChildrenElement(
     findChildElement(service, 'KeywordList'),
     'Keyword'
   )
     .map(getElementText)
     .filter((v, i, arr) => arr.indexOf(v) === i);
+  const provider = readProviderFromCapabilities(capabilitiesDoc);
 
   return {
     title: getElementText(findChildElement(service, 'Title')),
     name: getElementText(findChildElement(service, 'Name')),
     abstract: getElementText(findChildElement(service, 'Abstract')),
-    outputFormats: formats,
+    outputFormats: outputFormats,
+    infoFormats: infoFormats,
+    exceptionFormats: exceptionFormats,
     fees: getElementText(findChildElement(service, 'Fees')),
     constraints: getElementText(findChildElement(service, 'AccessConstraints')),
+    provider,
     keywords,
   };
+}
+
+/**
+ * Parse an operation definition from a WMS capabilities (e.g. GetMap)
+ * @param operation Operation element
+ */
+function parseOperation(operation: XmlElement): OperationUrl {
+  const urls: OperationUrl = {};
+  const dcpType = findChildrenElement(operation, 'DCPType');
+  const http = dcpType.flatMap((d) => findChildElement(d, 'HTTP'));
+  const methods = http.flatMap((h) => getChildrenElement(h));
+  methods.forEach((method) => {
+    const onlineResource = findChildElement(method, 'OnlineResource');
+    const methodName = stripNamespace(getElementName(method));
+    urls[methodName] = getElementAttribute(onlineResource, 'xlink:href');
+  });
+  return urls;
 }
 
 /**
@@ -94,7 +179,9 @@ function parseLayer(
   inheritedSrs: CrsCode[] = [],
   inheritedStyles: LayerStyle[] = [],
   inheritedAttribution: WmsLayerAttribution = null,
-  inheritedBoundingBoxes: Record<CrsCode, BoundingBox> = null
+  inheritedBoundingBoxes: Record<CrsCode, BoundingBox> = null,
+  inheritedMaxScaleDenom: number = null,
+  inheritedMinScaleDenom: number = null
 ): WmsLayerFull {
   const srsTag = version === '1.3.0' ? 'CRS' : 'SRS';
   const srsList = findChildrenElement(layerEl, srsTag).map(getElementText);
@@ -123,6 +210,30 @@ function parseLayer(
     return ['minx', 'miny', 'maxx', 'maxy'].map((name) =>
       getElementAttribute(bboxEl, name)
     );
+  }
+  function parseScaleHintValue(textValue, defaultValue) {
+    if (textValue === '') {
+      return defaultValue;
+    }
+    // convert resolution to scale denominator using the common pixel size of
+    // 0.28×0.28 mm as defined in WMS 1.3.0 specification section 7.2.4.6.9
+    return Math.sqrt(0.5 * parseFloat(textValue) ** 2) / 0.00028;
+  }
+  function parseScaleHint() {
+    const scaleHint = findChildElement(layerEl, 'ScaleHint');
+    if (!scaleHint) {
+      return [inheritedMinScaleDenom, inheritedMaxScaleDenom];
+    }
+    const min = getElementAttribute(scaleHint, 'min');
+    const max = getElementAttribute(scaleHint, 'max');
+    return [
+      parseScaleHintValue(min, inheritedMinScaleDenom),
+      parseScaleHintValue(max, inheritedMaxScaleDenom),
+    ];
+  }
+  function parseScaleDenominator(name, inheritedValue) {
+    const textValue = getElementText(findChildElement(layerEl, name));
+    return textValue === '' ? inheritedValue : parseFloat(textValue);
   }
   const attributionEl = findChildElement(layerEl, 'Attribution');
   const attribution =
@@ -169,8 +280,42 @@ function parseLayer(
     .map(getElementText)
     .filter((v, i, arr) => arr.indexOf(v) === i);
 
+  let minScaleDenominator, maxScaleDenominator;
+  if (version === '1.3.0') {
+    minScaleDenominator = parseScaleDenominator(
+      'MinScaleDenominator',
+      inheritedMinScaleDenom
+    );
+    maxScaleDenominator = parseScaleDenominator(
+      'MaxScaleDenominator',
+      inheritedMaxScaleDenom
+    );
+  } else {
+    [minScaleDenominator, maxScaleDenominator] = parseScaleHint();
+  }
+
+  const metadata = findChildrenElement(layerEl, 'MetadataURL').map(
+    (metadataUrlEl) => ({
+      type: getElementAttribute(metadataUrlEl, 'type'),
+      format: getElementText(findChildElement(metadataUrlEl, 'Format')),
+      url: getElementAttribute(
+        findChildElement(metadataUrlEl, 'OnlineResource'),
+        'xlink:href'
+      ),
+    })
+  );
+
   const children = findChildrenElement(layerEl, 'Layer').map((layer) =>
-    parseLayer(layer, version, availableCrs, styles, attribution, boundingBoxes)
+    parseLayer(
+      layer,
+      version,
+      availableCrs,
+      styles,
+      attribution,
+      boundingBoxes,
+      maxScaleDenominator,
+      minScaleDenominator
+    )
   );
   return {
     name: getElementText(findChildElement(layerEl, 'Name')),
@@ -183,6 +328,9 @@ function parseLayer(
     keywords,
     queryable,
     opaque,
+    ...(minScaleDenominator !== null ? { minScaleDenominator } : {}),
+    ...(maxScaleDenominator !== null ? { maxScaleDenominator } : {}),
+    ...(metadata.length && { metadata }),
     ...(children.length && { children }),
   };
 }
@@ -218,5 +366,50 @@ function parseLayerAttribution(attributionEl: XmlElement): WmsLayerAttribution {
     ...(title && { title }),
     ...(url && { url }),
     ...(logoUrl && { logoUrl }),
+  };
+}
+
+/**
+ * Read provider information from capabilities
+ * @param capabilitiesDoc
+ */
+function readProviderFromCapabilities(capabilitiesDoc: XmlDocument): Provider {
+  const service = findChildElement(getRootElement(capabilitiesDoc), 'Service');
+  const contactInformation = findChildElement(service, 'ContactInformation');
+  const contactPersonPrimary = findChildElement(
+    contactInformation,
+    'ContactPersonPrimary'
+  );
+  const address = findChildElement(contactInformation, 'ContactAddress');
+  return {
+    contact: {
+      name: getElementText(
+        findChildElement(contactPersonPrimary, 'ContactPerson')
+      ),
+      organization: getElementText(
+        findChildElement(contactPersonPrimary, 'ContactOrganization')
+      ),
+      position: getElementText(
+        findChildElement(contactInformation, 'ContactPosition')
+      ),
+      phone: getElementText(
+        findChildElement(contactInformation, 'ContactVoiceTelephone')
+      ),
+      fax: getElementText(
+        findChildElement(contactInformation, 'ContactFacsimileTelephone')
+      ),
+      address: {
+        deliveryPoint: getElementText(findChildElement(address, 'Address')),
+        city: getElementText(findChildElement(address, 'City')),
+        administrativeArea: getElementText(
+          findChildElement(address, 'StateOrProvince')
+        ),
+        postalCode: getElementText(findChildElement(address, 'PostCode')),
+        country: getElementText(findChildElement(address, 'Country')),
+      },
+      email: getElementText(
+        findChildElement(contactInformation, 'ContactElectronicMailAddress')
+      ),
+    },
   };
 }

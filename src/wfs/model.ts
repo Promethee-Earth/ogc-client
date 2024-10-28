@@ -1,4 +1,9 @@
-import { BoundingBox, CrsCode, MimeType } from '../shared/models.js';
+import {
+  BoundingBox,
+  CrsCode,
+  MetadataURL,
+  MimeType,
+} from '../shared/models.js';
 
 export type WfsVersion = '1.0.0' | '1.1.0' | '2.0.0';
 
@@ -11,6 +16,7 @@ export type WfsFeatureTypeInternal = {
   outputFormats: MimeType[];
   latLonBoundingBox?: BoundingBox;
   keywords?: string[];
+  metadata?: MetadataURL[];
 };
 
 export type FeaturePropertyType = string | number | boolean;
@@ -46,6 +52,7 @@ export type WfsFeatureTypeSummary = {
   otherCrs: CrsCode[];
   outputFormats: MimeType[];
   keywords?: string[];
+  metadata?: MetadataURL[];
 };
 
 export type WfsFeatureTypeFull = {
@@ -102,3 +109,44 @@ export type WfsFeatureTypePropsDetails = Record<
   string,
   WfsFeatureTypePropDetails
 >;
+
+export type WfsGetFeatureOptions = {
+  /**
+   * No limit if undefined
+   */
+  maxFeatures?: number;
+  /**
+   * if true, will ask for GeoJSON; will throw if the service does not support it
+   */
+  asJson?: boolean;
+  /**
+   * a supported output format (overridden by `asJson`)
+   */
+  outputFormat?: MimeType;
+  /**
+   * if unspecified, this will be the data native projection
+   */
+  outputCrs?: CrsCode;
+  /**
+   * an extent to restrict returned objects
+   */
+  extent?: BoundingBox;
+  /**
+   * if unspecified, `extent` should be in the data native projection
+   */
+  extentCrs?: CrsCode;
+  /**
+   * if the service supports it, this will be the index of the first feature to return
+   */
+  startIndex?: number;
+  /**
+   * if not defined, all attributes will be included; note that the fact
+   * that these attributes exist or not will not be checked!
+   */
+  attributes?: string[];
+  /**
+   * if true, will not return feature data, only hit count
+   * note: this might not work for WFS version < 2
+   */
+  hitsOnly?: boolean;
+};

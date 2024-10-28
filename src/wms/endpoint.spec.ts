@@ -2,6 +2,8 @@
 import capabilities130 from '../../fixtures/wms/capabilities-brgm-1-3-0.xml';
 // @ts-expect-error ts-migrate(7016)
 import capabilitiesStates from '../../fixtures/wms/capabilities-states-1-3-0.xml';
+// @ts-expect-error ts-migrate(7016)
+import exceptionReportWfs from '../../fixtures/wms/service-exception-report-wfs.xml';
 import WmsEndpoint from './endpoint.js';
 import { useCache } from '../shared/cache.js';
 
@@ -52,6 +54,17 @@ describe('WmsEndpoint', () => {
     it('resolves with the endpoint object', async () => {
       await expect(endpoint.isReady()).resolves.toEqual(endpoint);
     });
+    describe('service exception handling', () => {
+      beforeEach(() => {
+        global.fetchResponseFactory = () => exceptionReportWfs;
+        endpoint = new WmsEndpoint('https://my.test.service/ogc/wfs');
+      });
+      it('rejects when the endpoint returns an exception report', async () => {
+        await expect(endpoint.isReady()).rejects.toThrow(
+          'msWMSGetCapabilities(): WMS server error. WMS request not enabled. Check wms/ows_enable_request settings.'
+        );
+      });
+    });
   });
 
   describe('#getVersion', () => {
@@ -89,6 +102,13 @@ describe('WmsEndpoint', () => {
                     "BD Scan-Géol-50 est la base de données géoréférencées des cartes géologiques 'papier' à 1/50 000",
                   name: 'SCAN_D_GEOL50',
                   title: 'Carte géologique image de la France au 1/50 000e',
+                  children: [
+                    {
+                      abstract: '',
+                      name: 'INHERIT_SCALE',
+                      title: 'Inherited scale denominators',
+                    },
+                  ],
                 },
                 {
                   abstract: '',
@@ -187,6 +207,8 @@ describe('WmsEndpoint', () => {
           'application/x-pdf',
           'image/svg+xml',
         ],
+        infoFormats: ['text/plain', 'application/vnd.ogc.gml'],
+        exceptionFormats: ['XML', 'INIMAGE', 'BLANK'],
         keywords: [
           'Géologie',
           'BRGM',
@@ -196,6 +218,23 @@ describe('WmsEndpoint', () => {
           'WMS 1.3.0',
           'SLD 1.1.0',
         ],
+        provider: {
+          contact: {
+            name: 'Support BRGM',
+            organization: 'BRGM',
+            position: 'pointOfContact',
+            phone: '+33(0)2 38 64 34 34',
+            fax: '+33(0)2 38 64 35 18',
+            address: {
+              deliveryPoint: '3, Avenue Claude Guillemin, BP36009',
+              city: 'Orléans',
+              administrativeArea: 'Centre',
+              postalCode: '45060',
+              country: 'France',
+            },
+            email: 'contact-brgm@brgm.fr',
+          },
+        },
       });
     });
   });
@@ -212,7 +251,42 @@ describe('WmsEndpoint', () => {
           outputFormat: 'image/png',
         })
       ).toBe(
-        'https://my.test.service/ogc/wms?aa=bb&SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=layer1%2Clayer2&STYLES=&WIDTH=100&HEIGHT=200&FORMAT=image%2Fpng&CRS=EPSG%3A4326&BBOX=10%2C20%2C100%2C200'
+        'http://geoservices.brgm.fr/geologie?language=fre&SERVICE=WMS&REQUEST=GetMap&VERSION=1.3.0&LAYERS=layer1%2Clayer2&STYLES=&WIDTH=100&HEIGHT=200&FORMAT=image%2Fpng&CRS=EPSG%3A4326&BBOX=10%2C20%2C100%2C200'
+      );
+    });
+  });
+
+  describe('#getCapabilitiesUrl', () => {
+    it.skip('returns the URL used for the request before the capabilities are retrieved', async () => {
+      expect(endpoint.getCapabilitiesUrl()).toBe(
+        'https://my.test.service/ogc/wms?aa=bb&SERVICE=WMS&REQUEST=GetCapabilities'
+      );
+      await endpoint.isReady();
+    });
+
+    it('returns the self-reported URL after the capabilities are retrieved', async () => {
+      await endpoint.isReady();
+      expect(endpoint.getCapabilitiesUrl()).toBe(
+        'http://geoservices.brgm.fr/geologie?language=fre&SERVICE=WMS&REQUEST=GetCapabilities'
+      );
+    });
+  });
+
+  describe('#getOperationUrl', () => {
+    it.skip('returns NULL before the document is loaded', async () => {
+      expect(endpoint.getOperationUrl('GetMap')).toBeNull();
+      await endpoint.isReady();
+    });
+
+    it('returns undefined for a non-existant operation', async () => {
+      await endpoint.isReady();
+      expect(endpoint.getOperationUrl('foo')).toBeUndefined();
+    });
+
+    it('returns the correct URL for an existant operation', async () => {
+      await endpoint.isReady();
+      expect(endpoint.getOperationUrl('GetMap')).toBe(
+        'http://geoservices.brgm.fr/geologie?language=fre&'
       );
     });
   });

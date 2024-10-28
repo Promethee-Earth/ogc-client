@@ -11,15 +11,16 @@ import {
 } from './url.js';
 import { stripNamespace } from '../shared/xml-utils.js';
 import {
-  BoundingBox,
-  CrsCode,
   GenericEndpointInfo,
-  MimeType,
+  type HttpMethod,
+  type OperationName,
+  type OperationUrl,
 } from '../shared/models.js';
 import {
   WfsFeatureTypeBrief,
   WfsFeatureTypeInternal,
   WfsFeatureTypeSummary,
+  WfsGetFeatureOptions,
   WfsVersion,
 } from './model.js';
 import { isMimeTypeJson } from '../shared/mime-type.js';
@@ -32,6 +33,7 @@ export default class WfsEndpoint {
   private _capabilitiesPromise: Promise<void>;
   private _info: GenericEndpointInfo | null;
   private _featureTypes: WfsFeatureTypeInternal[] | null;
+  private _url: Record<OperationName, OperationUrl>;
   private _version: WfsVersion | null;
 
   /**
@@ -53,9 +55,10 @@ export default class WfsEndpoint {
       'WFS',
       'CAPABILITIES',
       this._capabilitiesUrl
-    ).then(({ info, featureTypes, version }) => {
+    ).then(({ info, featureTypes, url, version }) => {
       this._info = info;
       this._featureTypes = featureTypes;
+      this._url = url;
       this._version = version;
     });
   }
@@ -125,6 +128,7 @@ export default class WfsEndpoint {
       otherCrs: featureType.otherCrs,
       outputFormats: featureType.outputFormats,
       keywords: featureType.keywords,
+      ...('metadata' in featureType && { metadata: featureType.metadata }),
     } as WfsFeatureTypeSummary;
   }
 
@@ -141,12 +145,12 @@ export default class WfsEndpoint {
     return useCache(
       () => {
         const describeUrl = generateDescribeFeatureTypeUrl(
-          this._capabilitiesUrl,
+          this.getOperationUrl('DescribeFeatureType'),
           this._version,
           name
         );
         const getFeatureUrl = generateGetFeatureUrl(
-          this._capabilitiesUrl,
+          this.getOperationUrl('GetFeature'),
           this._version,
           name,
           undefined,
@@ -247,28 +251,10 @@ export default class WfsEndpoint {
   /**
    * Returns a URL that can be used to query features from this feature type.
    * @param featureType
-   * @param {Object} [options]
-   * @property [options.maxFeatures] no limit if undefined
-   * @property [options.asJson] if true, will ask for GeoJSON; will throw if the service does not support it
-   * @property [options.outputFormat] a supported output format (overridden by `asJson`)
-   * @property [options.outputCrs] if unspecified, this will be the data native projection
-   * @property [options.extent] an extent to restrict returned objects
-   * @property [options.extentCrs] if unspecified, `extent` should be in the data native projection
-   * @property [options.startIndex] if the service supports it, this will be the index of the first feature to return
+   * @param options
    * @returns Returns null if endpoint is not ready
    */
-  getFeatureUrl(
-    featureType: string,
-    options: {
-      maxFeatures?: number;
-      asJson?: boolean;
-      outputFormat?: MimeType;
-      outputCrs?: CrsCode;
-      extent?: BoundingBox;
-      extentCrs?: CrsCode;
-      startIndex?: number;
-    }
-  ) {
+  getFeatureUrl(featureType: string, options?: WfsGetFeatureOptions) {
     if (!this._featureTypes) {
       return null;
     }
@@ -280,6 +266,8 @@ export default class WfsEndpoint {
       extent,
       extentCrs,
       startIndex,
+      attributes,
+      hitsOnly,
     } = options || {};
     const internalFeatureType = this._getFeatureTypeByName(featureType);
     if (!internalFeatureType) {
@@ -305,17 +293,46 @@ export default class WfsEndpoint {
       );
     }
     return generateGetFeatureUrl(
-      this._capabilitiesUrl,
+      this.getOperationUrl('GetFeature'),
       this._version,
       internalFeatureType.name,
       format,
       maxFeatures,
-      undefined,
-      undefined,
+      attributes,
+      hitsOnly,
       outputCrs,
       extent,
       extentCrs,
       startIndex
     );
+  }
+
+  /**
+   * Returns the Capabilities URL of the WMS
+   *
+   * This is the URL reported by the service if available, otherwise the URL
+   * passed to the constructor
+   */
+  getCapabilitiesUrl() {
+    const baseUrl = this.getOperationUrl('GetCapabilities');
+    if (!baseUrl) {
+      return this._capabilitiesUrl;
+    }
+    return setQueryParams(baseUrl, {
+      SERVICE: 'WMS',
+      REQUEST: 'GetCapabilities',
+    });
+  }
+
+  /**
+   * Returns the URL reported by the WFS for the given operation
+   * @param operationName e.g. GetFeature, GetCapabilities, etc.
+   * @param method HTTP method
+   */
+  getOperationUrl(operationName: OperationName, method: HttpMethod = 'Get') {
+    if (!this._url) {
+      return null;
+    }
+    return this._url[operationName]?.[method];
   }
 }

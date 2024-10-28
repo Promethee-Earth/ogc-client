@@ -1,3 +1,4 @@
+import { readProviderFromCapabilities } from '../shared/ows.js';
 import {
   findChildElement,
   findChildrenElement,
@@ -6,6 +7,7 @@ import {
   getElementName,
   getElementText,
   getRootElement,
+  stripNamespace,
 } from '../shared/xml-utils.js';
 import { simplifyEpsgUrn } from '../shared/crs-utils.js';
 import { XmlDocument, XmlElement } from '@rgrove/parse-xml';
@@ -13,8 +15,43 @@ import {
   BoundingBox,
   GenericEndpointInfo,
   MimeType,
+  type OperationName,
+  type OperationUrl,
 } from '../shared/models.js';
 import { WfsFeatureTypeInternal, WfsVersion } from './model.js';
+
+/**
+ * Will read the operation URLS from the capabilities doc
+ * @param capabilitiesDoc Capabilities document
+ */
+export function readOperationUrlsFromCapabilities(
+  capabilitiesDoc: XmlDocument
+): Record<OperationName, OperationUrl> {
+  const urls: Record<OperationName, OperationUrl> = {};
+  const capabilities = getRootElement(capabilitiesDoc);
+  const operationsMetadata = findChildElement(
+    capabilities,
+    'OperationsMetadata'
+  );
+  if (operationsMetadata) {
+    // WFS 1.1.0 or 2.0.0
+    findChildrenElement(operationsMetadata, 'Operation').forEach(
+      (operation) => {
+        const name = getElementAttribute(operation, 'name');
+        urls[name] = parseOperation110(operation);
+      }
+    );
+  } else {
+    // WFS 1.0.0
+    const capability = findChildElement(capabilities, 'Capability');
+    const request = findChildElement(capability, 'Request');
+    getChildrenElement(request).forEach((operation) => {
+      const name = stripNamespace(getElementName(operation));
+      urls[name] = parseOperation100(operation);
+    });
+  }
+  return urls;
+}
 
 /**
  * Will read a WFS version from the capabilities doc
@@ -91,6 +128,11 @@ export function readInfoFromCapabilities(
       'Keyword'
     ).map(getElementText);
   }
+  let provider;
+  // no provider information defined in capabilities for WFS 1.0.0
+  if (version !== '1.0.0') {
+    provider = readProviderFromCapabilities(capabilitiesDoc);
+  }
 
   return {
     title: getElementText(findChildElement(service, 'Title')),
@@ -99,6 +141,7 @@ export function readInfoFromCapabilities(
     fees: getElementText(findChildElement(service, 'Fees')),
     constraints: getElementText(findChildElement(service, 'AccessConstraints')),
     keywords,
+    provider,
     outputFormats: readOutputFormatsFromCapabilities(capabilitiesDoc),
   };
 }
@@ -118,6 +161,38 @@ export function readFeatureTypesFromCapabilities(
   return findChildrenElement(capability, 'FeatureType').map((featureTypeEl) =>
     parseFeatureType(featureTypeEl, version, outputFormats)
   );
+}
+
+/**
+ * Parse an operation definition from a WFS 1.0.0 capabilities (e.g. GetFeature)
+ * @param operation Operation element
+ */
+function parseOperation100(operation: XmlElement): OperationUrl {
+  const urls: OperationUrl = {};
+  const dcpType = findChildrenElement(operation, 'DCPType');
+  const http = dcpType.flatMap((d) => findChildrenElement(d, 'HTTP'));
+  const methods = http.flatMap((h) => getChildrenElement(h));
+  methods.forEach((method) => {
+    const methodName = stripNamespace(getElementName(method));
+    urls[methodName] = getElementAttribute(method, 'onlineResource');
+  });
+  return urls;
+}
+
+/**
+ * Parse an operation definition from a WFS 1.1+ capabilities (e.g. GetFeature)
+ * @param operation Operation element
+ */
+function parseOperation110(operation: XmlElement): OperationUrl {
+  const urls: OperationUrl = {};
+  const dcpType = findChildrenElement(operation, 'DCP');
+  const http = dcpType.flatMap((d) => findChildElement(d, 'HTTP'));
+  const methods = http.flatMap((h) => getChildrenElement(h));
+  methods.forEach((method) => {
+    const methodName = stripNamespace(getElementName(method));
+    urls[methodName] = getElementAttribute(method, 'xlink:href');
+  });
+  return urls;
 }
 
 /**
@@ -168,6 +243,22 @@ function parseFeatureType(
       )
         .map(getElementText)
         .filter((v, i, arr) => arr.indexOf(v) === i);
+
+  const metadata =
+    serviceVersion === '2.0.0'
+      ? findChildrenElement(featureTypeEl, 'MetadataURL').map(
+          (metadataUrlEl) => ({
+            url: getElementAttribute(metadataUrlEl, 'xlink:href'),
+          })
+        )
+      : findChildrenElement(featureTypeEl, 'MetadataURL').map(
+          (metadataUrlEl) => ({
+            format: getElementAttribute(metadataUrlEl, 'format'),
+            type: getElementAttribute(metadataUrlEl, 'type'),
+            url: getElementText(metadataUrlEl).trim(),
+          })
+        );
+
   return {
     name: getElementText(findChildElement(featureTypeEl, 'Name')),
     title: getElementText(findChildElement(featureTypeEl, 'Title')),
@@ -182,5 +273,6 @@ function parseFeatureType(
       ? parseBBox100()
       : parseBBox(),
     keywords: keywords,
+    ...(metadata.length && { metadata }),
   };
 }

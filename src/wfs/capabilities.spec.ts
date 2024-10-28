@@ -10,6 +10,7 @@ import capabilities200_noFormats from '../../fixtures/wfs/capabilities-geo2franc
 import {
   readFeatureTypesFromCapabilities,
   readInfoFromCapabilities,
+  readOperationUrlsFromCapabilities,
   readVersionFromCapabilities,
 } from './capabilities.js';
 
@@ -40,6 +41,13 @@ describe('WFS capabilities', () => {
           -1.9540704007796161, 42.73286181824404, 1.496463327812538,
           45.717071228823876,
         ],
+        metadata: [
+          {
+            format: 'text/plain',
+            type: 'TC211',
+            url: 'https://www.pigma.org/geonetwork/?uuid=cbcae9a4-7fc0-4fc8-bd78-089af3af4e8a',
+          },
+        ],
         name: 'asp:asp_rpg2010',
         otherCrs: ['EPSG:32615', 'EPSG:32616', 'EPSG:32617', 'EPSG:32618'],
         outputFormats: [
@@ -58,6 +66,23 @@ describe('WFS capabilities', () => {
         latLonBoundingBox: [
           -0.4906009184568518, 45.175543885638376, 0.9778719979726385,
           46.14349349624617,
+        ],
+        metadata: [
+          {
+            format: 'text/html',
+            type: 'TC211',
+            url: 'https://www.pigma.org/geonetwork?uuid=4d840710-3f09-4f48-aa31-d2c4c0ee6fda',
+          },
+          {
+            format: 'text/html',
+            type: '19115',
+            url: 'https://www.pigma.org/geonetwork?uuid=4d840710-3f09-4f48-aa31-d2c4c0ee6fda',
+          },
+          {
+            format: 'text/xml',
+            type: '19115',
+            url: 'https://www.pigma.org/geonetwork/srv/fre/xml_iso19139?uuid=4d840710-3f09-4f48-aa31-d2c4c0ee6fda',
+          },
         ],
         name: 'cd16:comptages_routiers_l',
         otherCrs: ['EPSG:32615', 'EPSG:32616', 'EPSG:32617', 'EPSG:32618'],
@@ -80,6 +105,23 @@ describe('WFS capabilities', () => {
           46.13877580094452,
         ],
         name: 'cd16:hierarchisation_l',
+        metadata: [
+          {
+            format: 'text/html',
+            type: 'TC211',
+            url: 'https://www.pigma.org/geonetwork?uuid=cd27adaa-0ec5-4934-9374-143df09fb9f6',
+          },
+          {
+            format: 'text/html',
+            type: '19115',
+            url: 'https://www.pigma.org/geonetwork?uuid=cd27adaa-0ec5-4934-9374-143df09fb9f6',
+          },
+          {
+            format: 'text/xml',
+            type: '19115',
+            url: 'https://www.pigma.org/geonetwork/srv/fre/xml_iso19139?uuid=cd27adaa-0ec5-4934-9374-143df09fb9f6',
+          },
+        ],
         otherCrs: ['EPSG:32615', 'EPSG:32616', 'EPSG:32617', 'EPSG:32618'],
         outputFormats: [
           'application/gml+xml; version=3.2',
@@ -92,7 +134,13 @@ describe('WFS capabilities', () => {
     ];
     it('reads the feature types (2.0.0)', () => {
       const doc = parseXmlString(capabilities200);
-      expect(readFeatureTypesFromCapabilities(doc)).toEqual(expectedTypes);
+      const typesWithoutMetadataUrlAttributes = expectedTypes.map((type) => ({
+        ...type,
+        metadata: type.metadata.map((metadata) => ({ url: metadata.url })),
+      }));
+      expect(readFeatureTypesFromCapabilities(doc)).toEqual(
+        typesWithoutMetadataUrlAttributes
+      );
     });
     it('reads the feature types (1.1.0)', () => {
       const doc = parseXmlString(capabilities110);
@@ -139,6 +187,20 @@ describe('WFS capabilities', () => {
             1.3472171890368316, 48.82764887581316, 4.285589467078578,
             51.0896786738123,
           ],
+          metadata: [
+            {
+              url: 'https://www.geo2france.fr/geonetwork/srv/fre/catalog.search#/metadata/facf3747-bc19-44c7-9fd8-1f765d99c059',
+            },
+            {
+              url: 'https://www.geo2france.fr/geonetwork/srv/fre/catalog.search#/metadata/facf3747-bc19-44c7-9fd8-1f765d99c059',
+            },
+            {
+              url: 'https://www.geo2france.fr/geonetwork/srv/api/records/facf3747-bc19-44c7-9fd8-1f765d99c059/formatters/xml',
+            },
+            {
+              url: 'https://www.geo2france.fr/geonetwork/srv/api/records/facf3747-bc19-44c7-9fd8-1f765d99c059/formatters/xml',
+            },
+          ],
           name: 'cr_hdf:domaine_public_hdf_com',
           otherCrs: [],
           outputFormats: [
@@ -177,10 +239,29 @@ describe('WFS capabilities', () => {
       keywords: ['WFS', 'WMS', 'GEOSERVER'],
       outputFormats: [],
     };
+    const provider = {
+      name: 'GIP ATGeRi',
+      site: '',
+      contact: {
+        name: 'PIGMA',
+        position: '',
+        phone: '05.57.85.40.42',
+        fax: '',
+        address: {
+          deliveryPoint: '',
+          city: 'Bordeaux',
+          administrativeArea: '',
+          postalCode: '33075',
+          country: '',
+        },
+        email: 'admin.pigma@gipatgeri.fr',
+      },
+    };
     it('reads the service info (2.0.0)', () => {
       const doc = parseXmlString(capabilities200);
       expect(readInfoFromCapabilities(doc)).toEqual({
         ...expectedInfo,
+        provider,
         outputFormats: [
           'application/gml+xml; version=3.2',
           'DXF',
@@ -208,6 +289,7 @@ describe('WFS capabilities', () => {
       const doc = parseXmlString(capabilities110);
       expect(readInfoFromCapabilities(doc)).toEqual({
         ...expectedInfo,
+        provider,
         outputFormats: [
           'text/xml; subtype=gml/3.1.1',
           'DXF',
@@ -248,6 +330,122 @@ describe('WFS capabilities', () => {
           'JSON',
         ],
       });
+    });
+  });
+
+  describe('readOperationUrlsFromCapabilities', () => {
+    it('reads the operation URLs (2.0.0)', () => {
+      const doc = parseXmlString(capabilities200);
+      const expectedUrls = {
+        GetCapabilities: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        DescribeFeatureType: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        GetFeature: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        GetPropertyValue: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        ListStoredQueries: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        DescribeStoredQueries: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        CreateStoredQuery: {
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        DropStoredQuery: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        LockFeature: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        GetFeatureWithLock: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        Transaction: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+      };
+      expect(readOperationUrlsFromCapabilities(doc)).toEqual(expectedUrls);
+    });
+    it('reads the operation URLs (1.1.0)', () => {
+      const doc = parseXmlString(capabilities110);
+      const expectedUrls = {
+        GetCapabilities: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        DescribeFeatureType: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        GetFeature: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        GetGmlObject: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        LockFeature: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        GetFeatureWithLock: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        Transaction: {
+          Get: 'https://www.pigma.org/geoserver/wfs',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+      };
+      expect(readOperationUrlsFromCapabilities(doc)).toEqual(expectedUrls);
+    });
+    it('reads the operation URLs (1.0.0)', () => {
+      const doc = parseXmlString(capabilities100);
+      const expectedUrls = {
+        GetCapabilities: {
+          Get: 'https://www.pigma.org/geoserver/wfs?request=GetCapabilities',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        DescribeFeatureType: {
+          Get: 'https://www.pigma.org/geoserver/wfs?request=DescribeFeatureType',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        GetFeature: {
+          Get: 'https://www.pigma.org/geoserver/wfs?request=GetFeature',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        Transaction: {
+          Get: 'https://www.pigma.org/geoserver/wfs?request=Transaction',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        LockFeature: {
+          Get: 'https://www.pigma.org/geoserver/wfs?request=LockFeature',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+        GetFeatureWithLock: {
+          Get: 'https://www.pigma.org/geoserver/wfs?request=GetFeatureWithLock',
+          Post: 'https://www.pigma.org/geoserver/wfs',
+        },
+      };
+      expect(readOperationUrlsFromCapabilities(doc)).toEqual(expectedUrls);
     });
   });
 });
