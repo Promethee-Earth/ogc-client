@@ -1,4 +1,5 @@
 export { default as WfsEndpoint } from './wfs/endpoint.js';
+export { default as WfsTransactionalEndpoint } from './wfs/transactionalEndpoint.js'
 export type {
   WfsVersion,
   WfsFeatureWithProps,

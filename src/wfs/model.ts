@@ -55,6 +55,13 @@ export type WfsFeatureTypeSummary = {
   metadata?: MetadataURL[];
 };
 
+export type WfsFeatureTypeName = {
+  /**
+   * These properties will *not* include the feature geometry
+   */
+  properties: Record<string, FeaturePropertyType>;
+};
+
 export type WfsFeatureTypeFull = {
   name: string;
   title?: string;

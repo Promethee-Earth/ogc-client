@@ -4,6 +4,7 @@ import {
 } from '../worker/index.js';
 import { queryXmlDocument, setQueryParams } from '../shared/http-utils.js';
 import { parseFeatureTypeInfo } from './featuretypeinfo.js';
+import { parseFeatureTypeName } from './featuretypename.js';
 import { useCache } from '../shared/cache.js';
 import {
   generateDescribeFeatureTypeUrl,
@@ -335,4 +336,20 @@ export default class WfsEndpoint {
     }
     return this._url[operationName]?.[method];
   }
+
+
+  async getFeatureTypeName(name: string, typenames: string[]){
+    console.log(name, typenames);
+    const getFeatureUrl = generateGetFeatureUrl(
+      this._capabilitiesUrl,
+      this._version,
+      name,
+      undefined,
+      undefined,
+      typenames,
+      false
+    );
+    return queryXmlDocument(getFeatureUrl).then((result) => parseFeatureTypeName(result));
+  }
+
 }
