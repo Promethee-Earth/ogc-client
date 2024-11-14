@@ -59,7 +59,7 @@ export type WfsFeatureTypeName = {
   /**
    * These properties will *not* include the feature geometry
    */
-  properties: Record<string, FeaturePropertyType>;
+  properties:  Array<{ gml_id: string, fields: Record<string, string> }>;
 };
 
 export type WfsFeatureTypeFull = {
