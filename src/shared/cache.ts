@@ -121,9 +121,16 @@ export async function useCache<T>(
 export async function purgeOutdatedEntries() {
   const cache = await getCache();
   if (!cache) return;
+
   const keys = await cache.keys();
   for (const key of keys) {
     const resp = await cache.match(key);
+
+    if (!resp) {
+      await cache.delete(key);
+      continue;
+    }
+    
     if (parseInt(resp.headers.get('x-expiry')) <= Date.now())
       await cache.delete(key);
   }
