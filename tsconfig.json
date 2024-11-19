@@ -1,5 +1,11 @@
 {
   "compilerOptions": {
+    "paths": {
+      "ol/tilegrid/WMTS": ["./src/no-op-module.ts"],
+      "ol/proj": ["./src/no-op-module.ts"],
+      "ol/proj/proj4": ["./src/no-op-module.ts"],
+
+    },
     "outDir": "./dist",
     "target": "ESNext",
     "lib": ["es2020", "dom", "webworker"],
