@@ -5,17 +5,10 @@ import ogcsample from '../../fixtures/wmts/ogcsample.xml';
 // @ts-expect-error ts-migrate(7016)
 import arcgis from '../../fixtures/wmts/arcgis.xml';
 // @ts-expect-error ts-migrate(7016)
-import ign from '../../fixtures/wmts/ign.xml';
-// @ts-expect-error ts-migrate(7016)
 import capabilitiesWgs84 from '../../fixtures/wmts/capabilities_wgs84.xml';
-import { buildOpenLayersTileGrid } from './ol-tilegrid.js';
 
 jest.mock('../shared/cache', () => ({
   useCache: jest.fn((factory) => factory()),
-}));
-
-jest.mock('./ol-tilegrid', () => ({
-  buildOpenLayersTileGrid: jest.fn(() => ({ tileGrid: true })),
 }));
 
 const global = window as any;
@@ -142,64 +135,6 @@ describe('WmtsEndpoint', () => {
         expect(
           endpoint.getDefaultDimensions('BlueMarbleNextGeneration')
         ).toEqual({ OtherDimension: 'abcd', Time: '20110805' });
-      });
-    });
-
-    describe('#getOpenLayersTileGrid', () => {
-      it('returns a tile grid using the first matrix set', async () => {
-        await endpoint.isReady();
-        const tileGrid = await endpoint.getOpenLayersTileGrid(
-          'BlueMarbleNextGeneration'
-        );
-        expect(buildOpenLayersTileGrid).toHaveBeenCalledWith(
-          {
-            crs: 'urn:ogc:def:crs:OGC:1.3:CRS84',
-            identifier: 'BigWorldPixel',
-            tileMatrices: expect.arrayContaining([
-              {
-                identifier: '10000m',
-                matrixHeight: 5,
-                matrixWidth: 7,
-                scaleDenominator: 33130800.83133142,
-                tileHeight: 480,
-                tileWidth: 640,
-                topLeft: [-180, 90],
-              },
-            ]),
-            wellKnownScaleSet: 'urn:ogc:def:wkss:OGC:1.0:GlobalCRS84Pixel',
-          },
-          []
-        );
-        expect(tileGrid).toEqual({ tileGrid: true });
-      });
-      it('returns a tile grid using a specific matrix set', async () => {
-        await endpoint.isReady();
-        await endpoint.getOpenLayersTileGrid(
-          'BlueMarbleNextGeneration',
-          'google3857'
-        );
-        expect(buildOpenLayersTileGrid).toHaveBeenCalledWith(
-          {
-            boundingBox: [
-              1799448.394855, 6124949.74777, 1848250.442089, 6162571.828177,
-            ],
-            crs: 'urn:ogc:def:crs:EPSG:6.18:3:3857',
-            identifier: 'google3857',
-            tileMatrices: expect.arrayContaining([
-              {
-                identifier: '0',
-                matrixHeight: 1,
-                matrixWidth: 1,
-                scaleDenominator: 559082264.029,
-                tileHeight: 256,
-                tileWidth: 256,
-                topLeft: [-20037508.3428, 20037508.3428],
-              },
-            ]),
-            wellKnownScaleSet: 'urn:ogc:def:wkss:OGC:1.0:GoogleMapsCompatible',
-          },
-          []
-        );
       });
     });
 
@@ -415,74 +350,6 @@ describe('WmtsEndpoint', () => {
           )
         ).toBe(
           'https://services.arcgisonline.com/arcgis/rest/services/Demographics/USA_Population_Density/MapServer/WMTS/tile/1.0.0/Demographics_USA_Population_Density/default/default028mm/3/2/1.jpeg'
-        );
-      });
-    });
-  });
-
-  describe('IGN WMTS', () => {
-    beforeEach(() => {
-      global.fetchResponseFactory = () => ign;
-      endpoint = new WmtsEndpoint('https://my.test.service/ogc/wmts?bb=c');
-    });
-
-    describe('#getOpenLayersTileGrid', () => {
-      it('returns a tile grid including tile limits', async () => {
-        await endpoint.isReady();
-        await endpoint.getOpenLayersTileGrid('ORTHOIMAGERY.ORTHOPHOTOS');
-        expect(buildOpenLayersTileGrid).toHaveBeenCalledWith(
-          {
-            crs: 'EPSG:3857',
-            identifier: 'PM',
-            tileMatrices: expect.arrayContaining([
-              {
-                identifier: '0',
-                matrixHeight: 1,
-                matrixWidth: 1,
-                scaleDenominator: 559082264.0287179,
-                tileHeight: 256,
-                tileWidth: 256,
-                topLeft: [-20037508, 20037508],
-              },
-            ]),
-          },
-          expect.arrayContaining([
-            {
-              maxTileCol: 1,
-              maxTileRow: 1,
-              minTileCol: 0,
-              minTileRow: 0,
-              tileMatrix: '0',
-            },
-            {
-              maxTileCol: 2,
-              maxTileRow: 2,
-              minTileCol: 0,
-              minTileRow: 0,
-              tileMatrix: '1',
-            },
-            {
-              maxTileCol: 1024,
-              maxTileRow: 1024,
-              minTileCol: 0,
-              minTileRow: 31,
-              tileMatrix: '10',
-            },
-            {
-              maxTileCol: 2048,
-              maxTileRow: 2048,
-              minTileCol: 0,
-              minTileRow: 62,
-              tileMatrix: '11',
-            },
-            {
-              maxTileCol: 4096,
-              maxTileRow: 4096,
-              minTileCol: 0,
-              minTileRow: 125,
-              tileMatrix: '12',
-            },
-          ])
         );
       });
     });

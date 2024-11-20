@@ -17,7 +17,7 @@ export default defineConfig({
     },
     emptyOutDir: false,
     rollupOptions: {
-      external: [/^ol/, 'proj4'],
+      external: ['proj4'],
       output: {
         globals: (name) => name,
         inlineDynamicImports: true,

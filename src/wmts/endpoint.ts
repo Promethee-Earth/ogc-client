@@ -10,7 +10,6 @@ import {
   WmtsMatrixSet,
 } from './model.js';
 import { generateGetTileUrl } from './url.js';
-import type WMTSTileGrid from 'ol/tilegrid/WMTS';
 
 /**
  * Represents a WMTS endpoint advertising several layers.
@@ -179,42 +178,5 @@ export default class WmtsEndpoint {
       (prev, curr) => ({ ...prev, [curr.identifier]: curr.defaultValue }),
       {}
     );
-  }
-
-  private tileGridModule: Promise<typeof import('./ol-tilegrid')>;
-
-  /**
-   * Creates a WMTSTileGrid instance from the 'ol' package, for a given layer. Optionally, a matrix set
-   * can be provided;
-   * @param layerName
-   * @param matrixSetIdentifier
-   */
-  getOpenLayersTileGrid(
-    layerName: string,
-    matrixSetIdentifier?: string
-  ): Promise<WMTSTileGrid | null> {
-    if (!this._layers) return null;
-    if (!this.tileGridModule) {
-      this.tileGridModule = import('./ol-tilegrid').catch((e) => {
-        console.warn(
-          `[ogc-client] Cannot use getOpenLayersTileGrid, the 'ol' package is probably not available.\n`,
-          e
-        );
-        return null;
-      });
-    }
-    const layer = this.getLayerByName(layerName);
-    const matrixSetLink =
-      layer.matrixSets.find(
-        (matrixSet) => matrixSet.identifier === matrixSetIdentifier
-      ) ?? layer.matrixSets[0];
-    const matrixSet = this.getMatrixSetByIdentifier(matrixSetLink.identifier);
-    return this.tileGridModule.then((olTileGridModule) => {
-      if (!olTileGridModule) return null;
-      return olTileGridModule.buildOpenLayersTileGrid(
-        matrixSet,
-        matrixSetLink.limits
-      );
-    });
   }
 }
