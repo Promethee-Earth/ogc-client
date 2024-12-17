@@ -1,12 +1,14 @@
 {
-  "name": "@camptocamp/ogc-client",
-  "version": "1.1.1-dev",
+  "name": "@promethee-earth/ogc-client",
   "description": "A pure JS library for interacting with geospatial services.",
   "main": "./dist/dist-node.js",
   "browser": "./dist/index.js",
   "typings": "./dist/index.d.ts",
-  "repository": "https://github.com/camptocamp/ogc-client",
-  "homepage": "https://github.com/camptocamp/ogc-client",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Promethee-Earth/ogc-client.git"
+  },
+  "homepage": "https://github.com/Promethee-Earth/ogc-client",
   "files": [
     "dist/",
     "src/"
@@ -32,7 +34,6 @@
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "mitt": "^3.0.0",
-    "ol": "^8.2.0",
     "prettier": "2.8.8",
     "proj4": "^2.10.0",
     "regenerator-runtime": "^0.13.11",
@@ -43,13 +44,9 @@
     "vite-plugin-dts": "^3.7.2"
   },
   "peerDependencies": {
-    "ol": ">5.x",
     "proj4": ">2.8"
   },
   "peerDependenciesMeta": {
-    "ol": {
-      "optional": true
-    },
     "proj4": {
       "optional": true
     }
@@ -65,8 +62,13 @@
     "build:node": "vite build --config vite.node-config.js",
     "build:worker": "vite build --config vite.worker-config.js",
     "prepublishOnly": "npm run typecheck && npm test && npm run build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "install:conditional": "node install-dependencies.js"
   },
   "author": "olivia.guyot@camptocamp.com",
-  "license": "BSD-3-Clause"
+  "license": "BSD-3-Clause",
+  "version": "1.0.10",
+  "bugs": {
+    "url": "https://github.com/Promethee-Earth/ogc-client/issues"
+  }
 }
