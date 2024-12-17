@@ -338,13 +338,13 @@ export default class WfsEndpoint {
   }
 
 
-  async getFeatureTypeName(name: string, typenames: string[]){
-    console.log(name, typenames);
+  async getFeatureTypeName(name: string, typenames: string[], outputFormat: string | undefined = undefined ){
+    console.log(name, typenames, outputFormat);
     const getFeatureUrl = generateGetFeatureUrl(
       this._capabilitiesUrl,
       this._version,
       name,
-      undefined,
+      outputFormat,
       undefined,
       typenames,
       false
