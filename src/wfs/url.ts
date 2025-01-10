@@ -48,8 +48,6 @@ export function generateGetFeatureUrl(
     newParams[countParam] = maxFeatures.toString(10);
   if (outputCrs) {
     newParams.SRSNAME = outputCrs;
-  } else {
-    newParams.SRSNAME = "EPSG:4326"
   }
   if (extent) {
     const extentJoined = extent.join(',');
