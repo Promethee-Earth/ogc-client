@@ -632,7 +632,7 @@ describe('WfsEndpoint', () => {
           hitsOnly: true,
         })
       ).toEqual(
-        'https://www.pigma.org/geoserver/wfs?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=cd16%3Ahierarchisation_l&RESULTTYPE=hits&COUNT=1'
+        'https://www.pigma.org/geoserver/wfs?SERVICE=WFS&REQUEST=GetFeature&VERSION=2.0.0&TYPENAMES=cd16%3Ahierarchisation_l&RESULTTYPE=hits&COUNT=1&SRSNAME=EPSG%3A4326'
       );
     });
   });
