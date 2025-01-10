@@ -139,7 +139,7 @@ export default class WfsEndpoint {
    * @param name Feature type name property (unique in the WFS service)
    * @return {Promise<WfsFeatureTypeFull>|null} return null if layer was not found or endpoint is not ready
    */
-  getFeatureTypeFull(name: string) {
+  getFeatureTypeFull(name: string, srsName: string | undefined) {
     const featureType = this._getFeatureTypeByName(name);
     if (!featureType) return null;
 
@@ -157,7 +157,8 @@ export default class WfsEndpoint {
           undefined,
           undefined,
           undefined,
-          true
+          true,
+          srsName
         );
 
         return Promise.all([
