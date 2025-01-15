@@ -339,18 +339,24 @@ export default class WfsEndpoint {
   }
 
 
-  async getFeatureTypeName(name: string, typenames: string[], format?:string){
-    const getFeatureUrl = generateGetFeatureUrl(
-      this._capabilitiesUrl,
-      this._version,
-      name,
-      format,
-      undefined,
-      typenames,
-      false
-    );
+  async getFeatureTypeName(name: string, typenames: string[], format?:string, featureId?: string){
+  const getFeatureUrl = generateGetFeatureUrl(
+    this._capabilitiesUrl,
+    this._version,
+    name,
+    format,
+    undefined,
+    typenames,
+    false,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    featureId
+  );
+    
     if (format != undefined){
-      return sharedFetch(getFeatureUrl, 'GET', true).then((result) => result);
+      return sharedFetch(getFeatureUrl, 'GET', true);
     }else {
       return queryXmlDocument(getFeatureUrl).then((result) => parseFeatureTypeName(result));
     }
