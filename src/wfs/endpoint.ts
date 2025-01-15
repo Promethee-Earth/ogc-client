@@ -2,7 +2,7 @@ import {
   parseWfsCapabilities,
   queryWfsFeatureTypeDetails,
 } from '../worker/index.js';
-import { queryXmlDocument, setQueryParams } from '../shared/http-utils.js';
+import { queryXmlDocument, setQueryParams, sharedFetch } from '../shared/http-utils.js';
 import { parseFeatureTypeInfo } from './featuretypeinfo.js';
 import { parseFeatureTypeName } from './featuretypename.js';
 import { useCache } from '../shared/cache.js';
@@ -339,18 +339,22 @@ export default class WfsEndpoint {
   }
 
 
-  async getFeatureTypeName(name: string, typenames: string[], outputFormat: string | undefined = undefined ){
-    console.log(name, typenames, outputFormat);
+  async getFeatureTypeName(name: string, typenames: string[], format?:string){
     const getFeatureUrl = generateGetFeatureUrl(
       this._capabilitiesUrl,
       this._version,
       name,
-      outputFormat,
+      format,
       undefined,
       typenames,
       false
     );
-    return queryXmlDocument(getFeatureUrl).then((result) => parseFeatureTypeName(result));
+    if (format != undefined){
+      return sharedFetch(getFeatureUrl, 'GET', true).then((result) => result);
+    }else {
+      return queryXmlDocument(getFeatureUrl).then((result) => parseFeatureTypeName(result));
+    }
   }
 
 }
+
