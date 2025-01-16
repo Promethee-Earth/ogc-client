@@ -339,21 +339,21 @@ export default class WfsEndpoint {
   }
 
 
-  async getFeatureTypeName(name: string, typenames: string[], outputFormat?:string, featureId?: string){
+  async getFeatureTypeName(name: string, typenames: string[], outputFormat?:string, featureId?: number){
   const maxFeatures = featureId !== undefined ? 1 : undefined;
-  const startIndex = featureId !== undefined ? Number(featureId) : undefined;
+  const startIndex = featureId !== undefined ? featureId : undefined;
   const getFeatureUrl = generateGetFeatureUrl(
     this._capabilitiesUrl,
     this._version,
     name,
     outputFormat,
-    startIndex,
+    maxFeatures,
     typenames,
     false,
     undefined,
     undefined,
     undefined,
-    maxFeatures
+    startIndex
   );
     
     if (outputFormat != undefined){
