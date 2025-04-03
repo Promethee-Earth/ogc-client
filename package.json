@@ -1,19 +1,38 @@
 {
   "name": "@promethee-earth/ogc-client",
+  "version": "1.0.19",
   "description": "A pure JS library for interacting with geospatial services.",
-  "main": "./dist/dist-node.js",
-  "browser": "./dist/index.js",
-  "typings": "./dist/index.d.ts",
+  "homepage": "https://github.com/Promethee-Earth/ogc-client",
+  "bugs": {
+    "url": "https://github.com/Promethee-Earth/ogc-client/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Promethee-Earth/ogc-client.git"
   },
-  "homepage": "https://github.com/Promethee-Earth/ogc-client",
+  "license": "BSD-3-Clause",
+  "author": "olivia.guyot@camptocamp.com",
+  "type": "module",
+  "main": "./dist/dist-node.js",
+  "browser": "./dist/index.js",
   "files": [
     "dist/",
     "src/"
   ],
-  "type": "module",
+  "scripts": {
+    "test": "jest",
+    "format:write": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "npm run lint -- --fix",
+    "build": "rm -rf dist && npm run build:worker && npm run build:node && npm run build:browser",
+    "build:browser": "esbuild $(find ./src -name \"*.ts\" -type f -not -path '*worker/index.ts' -not -path '*.spec.ts') --outdir=./dist --platform=neutral --format=esm --sourcemap",
+    "build:node": "vite build --config vite.node-config.js",
+    "build:worker": "vite build --config vite.worker-config.js",
+    "prepublishOnly": "npm run typecheck && npm test && npm run build",
+    "typecheck": "tsc --noEmit",
+    "install:conditional": "node install-dependencies.js"
+  },
   "dependencies": {
     "@rgrove/parse-xml": "^4.1.0",
     "node-fetch": "^3.3.1"
@@ -51,24 +70,5 @@
       "optional": true
     }
   },
-  "scripts": {
-    "test": "jest",
-    "format:write": "prettier --write .",
-    "format:check": "prettier --check .",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "npm run lint -- --fix",
-    "build": "rm -rf dist && npm run build:worker && npm run build:node && npm run build:browser",
-    "build:browser": "esbuild $(find ./src -name \"*.ts\" -type f -not -path '*worker/index.ts' -not -path '*.spec.ts') --outdir=./dist --platform=neutral --format=esm --sourcemap",
-    "build:node": "vite build --config vite.node-config.js",
-    "build:worker": "vite build --config vite.worker-config.js",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build",
-    "typecheck": "tsc --noEmit",
-    "install:conditional": "node install-dependencies.js"
-  },
-  "author": "olivia.guyot@camptocamp.com",
-  "license": "BSD-3-Clause",
-  "version": "1.0.18",
-  "bugs": {
-    "url": "https://github.com/Promethee-Earth/ogc-client/issues"
-  }
+  "typings": "./dist/index.d.ts"
 }

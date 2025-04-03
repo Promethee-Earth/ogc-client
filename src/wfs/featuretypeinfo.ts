@@ -48,7 +48,7 @@ export function parseFeatureTypeInfo(
   )[0];
   const typeElementsEls = findChildrenElement(complexTypeEl, 'element', true);
   const properties = typeElementsEls
-    .filter((el) => /^xsd:|^xs:/.test(getElementAttribute(el, 'type')))
+    .filter((el) => getElementAttribute(el, 'type'))
     .reduce(
       (prev, curr) => ({
         ...prev,
