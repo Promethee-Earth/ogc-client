@@ -104,13 +104,16 @@ export function computeFeaturePropsDetails(
     for (const propName in curr.properties) {
       const propValue = curr.properties[propName];
       if (!(propName in prev)) {
-        prev[propName] = { uniqueValues: [] };
+        // prev[propName] = { uniqueValues: [] };
+        prev[propName] = [];
       }
-      const uniqueValue = prev[propName].uniqueValues.find(
-        (v) => v.value === propValue
-      );
-      if (uniqueValue) uniqueValue.count++;
-      else prev[propName].uniqueValues.push({ value: propValue, count: 1 });
+      // prev[propName].uniqueValues.push({ value: propValue });
+      prev[propName].push(propValue);
+      // const uniqueValue = prev[propName].uniqueValues.find(
+      //   (v) => v.value === propValue
+      // );
+      // if (uniqueValue) uniqueValue.count++;
+      // else prev[propName].uniqueValues.push({ value: propValue, count: 1 });
     }
     return prev;
   }, {});

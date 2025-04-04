@@ -157,7 +157,7 @@ export default class WfsEndpoint {
           undefined,
           undefined,
           undefined,
-          true,
+          false,
           srsName
         );
 

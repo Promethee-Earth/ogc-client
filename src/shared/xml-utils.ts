@@ -121,3 +121,14 @@ export function getElementText(element: XmlElement) {
 export function getElementAttribute(element: XmlElement, attrName: string) {
   return (element && element.attributes[attrName]) || '';
 }
+
+/**
+ * Returns the element's attribute value. Note that giving an null element
+ * will simply return an empty string.
+ * @param element
+ * @param attrName
+ * @return found attribute value or empty if non-existent
+ */
+export function getElementAttributeName(element: XmlElement, attrName: string) {
+  return (element && element.attributes.name != undefined && element.attributes.name == attrName) || '';
+}

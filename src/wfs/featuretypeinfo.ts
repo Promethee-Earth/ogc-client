@@ -1,5 +1,8 @@
 import {
+  stripNamespace,
   findChildrenElement,
+  getElementAttributeName,
+  getChildrenElement,
   getElementAttribute,
   getRootElement,
 } from '../shared/xml-utils.js';
@@ -40,32 +43,57 @@ export function parseFeatureTypeInfo(
   const objectCount = parseInt(
     getElementAttribute(getRootElement(getFeatureHitsDoc), hitsAttr)
   );
+  const elements = getChildrenElement(
+    getRootElement(describeFeatureTypeDoc)
+  );
 
-  const complexTypeEl = findChildrenElement(
-    getRootElement(describeFeatureTypeDoc),
-    'complexType',
-    true
-  )[0];
-  const typeElementsEls = findChildrenElement(complexTypeEl, 'element', true);
-  const properties = typeElementsEls
-    .filter((el) => getElementAttribute(el, 'type'))
-    .reduce(
-      (prev, curr) => ({
-        ...prev,
-        [getElementAttribute(curr, 'name')]: getTypeFromXsdType(
-          getElementAttribute(curr, 'type')
-        ),
-      }),
-      {}
-    );
+  let properties;
+  for (const element of elements) {
+    if (getElementAttributeName(element, stripNamespace(name)) == true){
+      const complexTypeEl = findChildrenElement(
+        element,
+        'complexType',
+        true
+      )[0];
+    const typeElementsEls = findChildrenElement(complexTypeEl, 'element', true);
+    properties = typeElementsEls
+      .filter((el) => getElementAttribute(el, 'type'))
+      .reduce(
+        (prev, curr) => ({
+          ...prev,
+          [getElementAttribute(curr, 'name')]: getTypeFromXsdType(
+            getElementAttribute(curr, 'type')
+          ),
+        }),
+        {}
+      );
+      }
+  } 
 
-  const geomEl = typeElementsEls.filter((el) =>
-    getElementAttribute(el, 'type').startsWith('gml:')
-  )[0];
-  const geometryName = geomEl ? getElementAttribute(geomEl, 'name') : undefined;
-  const geometryType = geomEl
-    ? getGeomTypeFromGmlType(getElementAttribute(geomEl, 'type'))
-    : undefined;
+  // const properties = undefined;
+  const geometryName = undefined;
+  const geometryType = undefined;
+  // const typeElementsEls = findChildrenElement(complexTypeEl, 'element', true);
+  // console.log(typeElementsEls);
+  // const properties = typeElementsEls
+  //   .filter((el) => /^xsd:|^xs:/.test(getElementAttribute(el, 'type')))
+  //   .reduce(
+  //     (prev, curr) => ({
+  //       ...prev,
+  //       [getElementAttribute(curr, 'name')]: getTypeFromXsdType(
+  //         getElementAttribute(curr, 'type')
+  //       ),
+  //     }),
+  //     {}
+  //   );
+
+  // const geomEl = typeElementsEls.filter((el) =>
+  //   getElementAttribute(el, 'type').startsWith('gml:')
+  // )[0];
+  // const geometryName = geomEl ? getElementAttribute(geomEl, 'name') : undefined;
+  // const geometryType = geomEl
+  //   ? getGeomTypeFromGmlType(getElementAttribute(geomEl, 'type'))
+  //   : undefined;
 
   return {
     name,
@@ -146,3 +174,4 @@ function getGeomTypeFromGmlType(gmlType: string): FeatureGeometryType {
       return 'unknown';
   }
 }
+
