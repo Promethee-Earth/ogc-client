@@ -1,6 +1,7 @@
 import { OgcApiDocument, OgcApiDocumentLink } from './model.js';
 import { EndpointError } from '../shared/errors.js';
 import { sharedFetch } from '../shared/http-utils.js';
+import { getParentPath } from '../shared/url-utils.js';
 
 export function fetchDocument<T extends OgcApiDocument>(
   url: string
@@ -69,7 +70,11 @@ export function fetchCollectionRoot(
     }
     // if there is a collections array, we expect the parent path to end with slash
     if ('collections' in doc) {
-      parentUrl = `${parentUrl}/`;
+      const urlObj = new URL(parentUrl);
+      if (!urlObj.pathname.endsWith('/')) {
+        urlObj.pathname = `${urlObj.pathname}/`;
+      }
+      parentUrl = urlObj.toString();
     }
     return fetchCollectionRoot(parentUrl);
   });
@@ -130,14 +135,4 @@ export function assertHasLinks(
 ) {
   if (!hasLinks(doc, relType))
     throw new EndpointError(`Could not find link with type: ${relType}`);
-}
-
-export function getParentPath(url: string): string | null {
-  const urlObj = new URL(url, window.location.toString());
-  const pathParts = urlObj.pathname.replace(/\/$/, '').split('/');
-  if (pathParts.length <= 2) {
-    return null;
-  }
-  urlObj.pathname = pathParts.slice(0, -1).join('/');
-  return urlObj.toString();
 }

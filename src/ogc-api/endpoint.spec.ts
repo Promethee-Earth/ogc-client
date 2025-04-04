@@ -22,6 +22,9 @@ beforeAll(() => {
         ok: false,
         status: 404,
         headers: new Headers(),
+        clone: function () {
+          return this;
+        },
       } as Response;
     }
 
@@ -35,6 +38,9 @@ beforeAll(() => {
         ok: false,
         status: 404,
         headers: new Headers(),
+        clone: function () {
+          return this;
+        },
       } as Response;
     }
     const contents = await readFile(filePath, {
@@ -162,6 +168,7 @@ describe('OgcApiEndpoint', () => {
           { name: 'waterlines', hasFeatures: true },
           { name: 'woodland', hasFeatures: true },
           { name: 'dutch-metadata', hasRecords: true },
+          { name: 'missing-feature-type-metadata', hasFeatures: true },
         ]);
       });
     });
@@ -189,6 +196,7 @@ describe('OgcApiEndpoint', () => {
           'urban_areas',
           'waterlines',
           'woodland',
+          'missing-feature-type-metadata',
         ]);
       });
     });
@@ -1679,6 +1687,7 @@ The document at http://local/sample-data/notjson?f=json does not appear to be va
           'urban_areas',
           'waterlines',
           'woodland',
+          'missing-feature-type-metadata',
         ]);
       });
     });
@@ -1888,22 +1897,29 @@ The document at http://local/nonexisting?f=json could not be fetched.`
       describe('#allCollections', () => {
         it('returns collection ids', async () => {
           await expect(endpoint.allCollections).resolves.toEqual([
-            { name: 'NaturalEarth' },
-            { name: 'NaturalEarth:raster' },
-            { name: 'NaturalEarth:raster:HYP_HR_SR_OB_DR', hasMapTiles: true },
+            { name: 'NaturalEarth', hasFeatures: true },
+            { name: 'NaturalEarth:raster', hasFeatures: true },
+            {
+              name: 'NaturalEarth:raster:HYP_HR_SR_OB_DR',
+              hasMapTiles: true,
+              hasFeatures: true,
+            },
             {
               name: 'NaturalEarth:raster:NE1_HR_LC_SR_W_DR',
               hasMapTiles: true,
+              hasFeatures: true,
             },
             {
               name: 'NaturalEarth:raster:NE2_HR_LC_SR_W_DR',
               hasMapTiles: true,
+              hasFeatures: true,
             },
-            { name: 'NaturalEarth:physical' },
+            { name: 'NaturalEarth:physical', hasFeatures: true },
             {
               name: 'NaturalEarth:physical:ne_10m_lakes_pluvial',
               hasMapTiles: true,
               hasVectorTiles: true,
+              hasFeatures: true,
             },
           ]);
         });
@@ -2163,6 +2179,48 @@ The document at http://local/nonexisting?f=json could not be fetched.`
         ).resolves.toEqual(
           'https://my.server.org/sample-data/collections/airports/styles/Tritanopia?f=sld10'
         );
+      });
+    });
+  });
+  describe('endpoint with query params', () => {
+    describe('on collections path', () => {
+      beforeEach(() => {
+        endpoint = new OgcApiEndpoint(
+          'http://local/sample-data/collections?foo=bar'
+        );
+      });
+      it('correctly parses endpoint info and collections', async () => {
+        await expect(endpoint.info).resolves.toEqual({
+          title: 'OS Open Zoomstack',
+          description:
+            'OS Open Zoomstack is a comprehensive vector basemap showing coverage of Great Britain at a national level, right down to street-level detail.',
+          attribution:
+            'Contains OS data © Crown copyright and database right 2021.',
+        });
+        await expect(endpoint.featureCollections).resolves.toEqual([
+          'airports',
+          'boundaries',
+          'contours',
+          'district_buildings',
+          'etl',
+          'foreshore',
+          'greenspace',
+          'land',
+          'local_buildings',
+          'names',
+          'national_parks',
+          'rail',
+          'railway_stations',
+          'roads_local',
+          'roads_national',
+          'roads_regional',
+          'sites',
+          'surfacewater',
+          'urban_areas',
+          'waterlines',
+          'woodland',
+          'missing-feature-type-metadata',
+        ]);
       });
     });
   });
