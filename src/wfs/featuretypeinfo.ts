@@ -141,6 +141,10 @@ function getTypeFromXsdType(xsdType: string): FeaturePropertyType {
     case 'unsignedShort':
     case 'unsignedByte':
       return 'integer';
+    case 'time':
+    case 'date':
+    case 'dateTime':
+      return 'time';
     default:
       return 'string';
   }

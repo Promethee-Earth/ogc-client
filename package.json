@@ -1,6 +1,6 @@
 {
   "name": "@promethee-earth/ogc-client",
-  "version": "1.2.1",
+  "version": "1.2.3",
   "description": "A pure JS library for interacting with geospatial services.",
   "homepage": "https://github.com/Promethee-Earth/ogc-client",
   "bugs": {
@@ -29,7 +29,6 @@
     "build:browser": "esbuild $(find ./src -name \"*.ts\" -type f -not -path '*worker/index.ts' -not -path '*.spec.ts') --outdir=./dist --platform=neutral --format=esm --sourcemap",
     "build:node": "vite build --config vite.node-config.js",
     "build:worker": "vite build --config vite.worker-config.js",
-    "prepublishOnly": "npm run typecheck && npm test && npm run build",
     "typecheck": "tsc --noEmit",
     "install:conditional": "node install-dependencies.js"
   },
