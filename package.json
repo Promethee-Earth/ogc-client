@@ -1,6 +1,6 @@
 {
   "name": "@promethee-earth/ogc-client",
-  "version": "1.2.4-dev5",
+  "version": "1.2.8",
   "description": "A pure JS library for interacting with geospatial services.",
   "homepage": "https://github.com/Promethee-Earth/ogc-client",
   "bugs": {

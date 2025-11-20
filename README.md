@@ -5,7 +5,7 @@
 **ogc-client** is a Typescript library which implements several OGC standards and will help you interact with
 them in a user-friendly and consistent way.
 
-[Documentation and live demo here!](https://camptocamp.github.io/ogc-client/)
+THe lib is based from @captopcamp lib. You can find the [Documentation and live demo here!](https://camptocamp.github.io/ogc-client/).
 
 The following standards are partially implemented:
 
@@ -29,20 +29,20 @@ The following standards are partially implemented:
 To install **ogc-client**, run:
 
 ```bash
-$ npm install --save @camptocamp/ogc-client
+$ npm install --save @promethee-earth/ogc-client
 ```
 
 To use, import API symbols like so:
 
 ```js
-import { WmsEndpoint, WfsEndpoint } from '@camptocamp/ogc-client';
+import { WmsEndpoint, WfsEndpoint } from '@promethee-earth/ogc-client';
 ```
 
 Note: if you want to disable web worker usage, for example to solve issues with the `Referer` header on outgoing
 requests, use:
 
 ```js
-import { enableFallbackWithoutWorker } from '@camptocamp/ogc-client';
+import { enableFallbackWithoutWorker } from '@promethee-earth/ogc-client';
 
 enableFallbackWithoutWorker();
 ```
@@ -51,10 +51,10 @@ All processing will be done on the main thread after this call, including HTTP r
 
 ### Use the latest development version
 
-[The `@camptocamp/ogc-client` NPM package](https://www.npmjs.com/package/@camptocamp/ogc-client) is updated on every commit on the `main` branch under the `@dev` tag. To use it:
+[The `@promethee-earth/ogc-client` NPM package](https://www.npmjs.com/package/@promethee-earth/ogc-client) is updated on every commit on the `main` branch under the `@dev` tag. To use it:
 
 ```bash
-$ npm install --save @camptocamp/ogc-client@dev
+$ npm install --save @promethee-earth/ogc-client@dev
 ```
 
 ### Application
@@ -69,8 +69,7 @@ $ npm install
 $ npm start
 ```
 
-The app is based on [Vue.js](https://vuejs.org/) and will showcase most features implemented in the library.
-You will need to supply it with valid OGC service urls.
+The app is based on Typescript.
 
 ### Publish
 
@@ -80,7 +79,7 @@ npm login
 npm publish --tag next
 ```
 
-/!\ For windows user, you need to clean/remove the /dist folder, and run manually the following commands against the npm run build:
+/!\ For windows user, you need to clean/remove the /dist folder first, then run manually the following commands against the npm run build:
 
 ```bash
 build:worker
@@ -88,4 +87,6 @@ build:node
 build-windows:browser
 ```
 
-The initial scripts was compliant with Linux and MacOS but not Windows
+Indeed, the initial scripts was compliant with Linux and MacOS but not Windows.
+
+You need then to apply the remaining commands (npm login, ...).

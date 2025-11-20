@@ -43,19 +43,20 @@ export default class WfsEndpoint {
    *   initialize the endpoint
    */
   constructor(url: string) {
-    this._capabilitiesUrl = setQueryParams(url, {
+    const capabilitiesUrl = setQueryParams(url, {
       SERVICE: 'WFS',
       REQUEST: 'GetCapabilities',
     });
+    this._capabilitiesUrl = capabilitiesUrl;
 
     /**
      * This fetches the capabilities doc and parses its contents
      */
     this._capabilitiesPromise = useCache(
-      () => parseWfsCapabilities(this._capabilitiesUrl),
+      () => parseWfsCapabilities(capabilitiesUrl),
       'WFS',
       'CAPABILITIES',
-      this._capabilitiesUrl
+      capabilitiesUrl
     ).then(({ info, featureTypes, url, version }) => {
       this._info = info;
       this._featureTypes = featureTypes;
@@ -68,7 +69,7 @@ export default class WfsEndpoint {
    * Resolves when the endpoint is ready to use. Returns the same endpoint object for convenience.
    * @throws {EndpointError}
    */
-  isReady() {
+  async isReady() {
     return this._capabilitiesPromise.then(() => this);
   }
 
@@ -98,6 +99,7 @@ export default class WfsEndpoint {
 
   private _getFeatureTypeByName(name: string) {
     if (!this._featureTypes) return null;
+  
     const isQualified = stripNamespace(name) !== name;
     return (
       this._featureTypes.find((featureType) =>
@@ -144,7 +146,7 @@ export default class WfsEndpoint {
     if (!featureType) return null;
 
     return useCache(
-      () => {
+      async () => {
         const describeUrl = generateDescribeFeatureTypeUrl(
           this.getOperationUrl('DescribeFeatureType'),
           this._version,
@@ -161,16 +163,15 @@ export default class WfsEndpoint {
           srsName
         );
 
-        return Promise.all([
+        const [describeResponse, getFeatureResponse] = await Promise.all([
           queryXmlDocument(describeUrl),
           queryXmlDocument(getFeatureUrl),
-        ]).then(([describeResponse, getFeatureResponse]) =>
-          parseFeatureTypeInfo(
-            featureType,
-            describeResponse,
-            getFeatureResponse,
-            this._version
-          )
+        ]);
+        return parseFeatureTypeInfo(
+          featureType,
+          describeResponse,
+          getFeatureResponse,
+          this._version
         );
       },
       'WFS',
@@ -186,6 +187,7 @@ export default class WfsEndpoint {
   getSingleFeatureTypeName(): string | null {
     if (!this._featureTypes) return null;
     if (this._featureTypes.length === 1) return this._featureTypes[0].name;
+
     return null;
   }
 
@@ -224,13 +226,15 @@ export default class WfsEndpoint {
 
   private _getJsonCompatibleOutputFormat(featureType: string) {
     const featureTypeInfo = this._getFeatureTypeByName(featureType);
-    if (!featureTypeInfo) {
+    if (!featureTypeInfo)
       throw new Error(
         `The following feature type was not found in the service: ${featureType}`
       );
-    }
+  
+
     const candidates = featureTypeInfo.outputFormats.filter(isMimeTypeJson);
     if (!candidates.length) return null;
+  
     return candidates[0];
   }
 
@@ -239,6 +243,7 @@ export default class WfsEndpoint {
    */
   supportsJson(featureType: string) {
     if (!this._featureTypes) return null;
+
     return !!this._getJsonCompatibleOutputFormat(featureType);
   }
 
@@ -247,6 +252,7 @@ export default class WfsEndpoint {
    */
   supportsStartIndex(): boolean {
     if (!this._version) return false;
+
     return this._version >= '2.0.0';
   }
 
@@ -257,9 +263,9 @@ export default class WfsEndpoint {
    * @returns Returns null if endpoint is not ready
    */
   getFeatureUrl(featureType: string, options?: WfsGetFeatureOptions) {
-    if (!this._featureTypes) {
+    if (!this._featureTypes)
       return null;
-    }
+
     const {
       maxFeatures,
       asJson,
@@ -272,11 +278,12 @@ export default class WfsEndpoint {
       hitsOnly,
     } = options || {};
     const internalFeatureType = this._getFeatureTypeByName(featureType);
-    if (!internalFeatureType) {
+    if (!internalFeatureType)
       throw new Error(
         `The following feature type was not found in the service: ${featureType}`
       );
-    }
+  
+  
     let format = outputFormat;
     if (asJson) {
       format = this._getJsonCompatibleOutputFormat(featureType) || undefined;
@@ -287,13 +294,14 @@ export default class WfsEndpoint {
       }
     } else if (
       outputFormat &&
-      internalFeatureType.outputFormats.indexOf(outputFormat) === -1
+      !internalFeatureType.outputFormats.includes(outputFormat)
     ) {
       // do not prevent using this output format, because it still might work! but give a warning at least
       console.warn(
         `[ogc-client] The following output format type was not found in the feature type ${internalFeatureType.name}: ${outputFormat}`
       );
     }
+  
     return generateGetFeatureUrl(
       this.getOperationUrl('GetFeature'),
       this._version,
@@ -317,9 +325,9 @@ export default class WfsEndpoint {
    */
   getCapabilitiesUrl() {
     const baseUrl = this.getOperationUrl('GetCapabilities');
-    if (!baseUrl) {
+    if (!baseUrl) 
       return this._capabilitiesUrl;
-    }
+
     return setQueryParams(baseUrl, {
       SERVICE: 'WMS',
       REQUEST: 'GetCapabilities',
@@ -332,9 +340,9 @@ export default class WfsEndpoint {
    * @param method HTTP method
    */
   getOperationUrl(operationName: OperationName, method: HttpMethod = 'Get') {
-    if (!this._url) {
+    if (!this._url)
       return null;
-    }
+
     return this._url[operationName]?.[method];
   }
 
@@ -350,12 +358,8 @@ async getFeatureTypeName(name: string, typenames: string[], outputFormat?:string
     false
   );
     if (options) getFeatureUrl = getFeatureUrl + options;
-    if (outputFormat != undefined) {
-      return sharedFetch(getFeatureUrl, 'GET', true);
-    }else {
-      return queryXmlDocument(getFeatureUrl).then((result) => parseFeatureTypeName(result));
-    }
-  }
 
+    return outputFormat != undefined ? sharedFetch(getFeatureUrl, 'GET', true) : queryXmlDocument(getFeatureUrl).then((result) => parseFeatureTypeName(result));
+  }
 }
 

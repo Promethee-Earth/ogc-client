@@ -20,17 +20,21 @@ export function getCacheExpiryDuration() {
 let cachePromise: Promise<Cache | null>;
 export function getCache() {
   if (cachePromise !== undefined) return cachePromise;
+
   if (!('caches' in globalThis)) {
     cachePromise = Promise.resolve(null);
     return cachePromise;
   }
+
   cachePromise = caches.open('ogc-client').catch((e) => {
     console.info(
       '[ogc-client] Cache could not be accessed for the following reason:',
       e
     );
+  
     return null;
   });
+
   return cachePromise;
 }
 
@@ -42,7 +46,7 @@ export function _resetCache() {
 export async function storeCacheEntry(object: unknown, ...keys: string[]) {
   const cache = await getCache();
   if (!cache) return;
-  const entryUrl = 'https://cache/' + keys.join('/');
+  const entryUrl = `https://cache/${keys.join('/')}`;
   try {
     await cache.put(
       entryUrl,
@@ -64,7 +68,7 @@ export async function storeCacheEntry(object: unknown, ...keys: string[]) {
 export async function hasValidCacheEntry(...keys: string[]) {
   const cache = await getCache();
   if (!cache) return;
-  const entryUrl = 'https://cache/' + keys.join('/');
+  const entryUrl = `https://cache/${keys.join('/')}`;
   return cache
     .match(entryUrl)
     .then((req) => !!req && parseInt(req.headers.get('x-expiry')) > Date.now());
@@ -73,8 +77,10 @@ export async function hasValidCacheEntry(...keys: string[]) {
 export async function readCacheEntry(...keys: string[]) {
   const cache = await getCache();
   if (!cache) return;
-  const entryUrl = 'https://cache/' + keys.join('/');
+
+  const entryUrl = `https://cache/${keys.join('/')}`;
   const response = await cache.match(entryUrl);
+
   return response ? response.clone().json() : null;
 }
 
@@ -98,18 +104,22 @@ export async function useCache<T>(
   ...keys: string[]
 ): Promise<T> {
   await purgeOutdatedEntries();
-  if (await hasValidCacheEntry(...keys)) {
+  if (await hasValidCacheEntry(...keys))
     return readCacheEntry(...keys);
-  }
+
   const taskKey = keys.join('#');
-  if (tasksMap.has(taskKey)) {
+  if (tasksMap.has(taskKey))
     return tasksMap.get(taskKey) as T;
-  }
-  const taskRun = factory();
+
+  let taskRun = factory();
   if (taskRun instanceof Promise) {
-    taskRun.then(() => tasksMap.delete(taskKey));
+    taskRun = taskRun.finally(() => {
+      if (tasksMap.has(taskKey))
+        tasksMap.delete(taskKey);
+    });
     tasksMap.set(taskKey, taskRun);
   }
+
   const result = await taskRun;
   await storeCacheEntry(result, ...keys);
   return result;
@@ -128,6 +138,7 @@ export async function purgeOutdatedEntries() {
 
     if (!resp) {
       await cache.delete(key);
+
       continue;
     }
     
@@ -142,8 +153,8 @@ export async function purgeOutdatedEntries() {
 export async function clearCache() {
   const cache = await getCache();
   if (!cache) return;
+
   const keys = await cache.keys();
-  for (const key of keys) {
+  for (const key of keys)
     await cache.delete(key);
-  }
 }
