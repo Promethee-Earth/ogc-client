@@ -75,6 +75,17 @@ You will need to supply it with valid OGC service urls.
 ### Publish
 
 ```bash
+npm run build
 npm login
 npm publish --tag next
 ```
+
+/!\ For windows user, you need to clean/remove the /dist folder, and run manually the following commands against the npm run build:
+
+```bash
+build:worker
+build:node
+build-windows:browser
+```
+
+The initial scripts was compliant with Linux and MacOS but not Windows
