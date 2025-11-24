@@ -22,7 +22,7 @@ import {
 export function parseFeatureTypeInfo(
   featureType: WfsFeatureTypeInternal,
   describeFeatureTypeDoc: XmlDocument,
-  getFeatureHitsDoc: XmlDocument,
+  getFeatureHitsDoc: XmlDocument | undefined,
   serviceVersion: WfsVersion
 ): WfsFeatureTypeFull {
   const {
@@ -40,9 +40,9 @@ export function parseFeatureTypeInfo(
   const hitsAttr = serviceVersion.startsWith('2.0')
     ? 'numberMatched'
     : 'numberOfFeatures';
-  const objectCount = parseInt(
+  const objectCount = getFeatureHitsDoc ? parseInt(
     getElementAttribute(getRootElement(getFeatureHitsDoc), hitsAttr)
-  );
+  ) : 0;
   const elements = getChildrenElement(
     getRootElement(describeFeatureTypeDoc)
   );
@@ -150,7 +150,7 @@ function getTypeFromXsdType(xsdType: string): FeaturePropertyType {
   }
 }
 
-function getGeomTypeFromGmlType(gmlType: string): FeatureGeometryType {
+export function getGeomTypeFromGmlType(gmlType: string): FeatureGeometryType {
   const gmlTypeNoNamespace =
     gmlType.indexOf(':') > -1
       ? gmlType.substr(gmlType.indexOf(':') + 1)

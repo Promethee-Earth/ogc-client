@@ -141,7 +141,43 @@ export default class WfsEndpoint {
    * @param name Feature type name property (unique in the WFS service)
    * @return {Promise<WfsFeatureTypeFull>|null} return null if layer was not found or endpoint is not ready
    */
-  getFeatureTypeFull(name: string, srsName: string | undefined = undefined) {
+  getFeatureTypeMetadata(name: string) {
+    const featureType = this._getFeatureTypeByName(name);
+    if (!featureType) return null;
+
+    return useCache(
+      async () => {
+        const describeUrl = generateDescribeFeatureTypeUrl(
+          this.getOperationUrl('DescribeFeatureType'),
+          this._version,
+          name,
+        );
+        
+
+        const [describeResponse] = await Promise.all([
+          queryXmlDocument(describeUrl),
+        ]);
+        return parseFeatureTypeInfo(
+          featureType,
+          describeResponse,
+          undefined,
+          this._version
+        );
+      },
+      'WFS',
+      'FEATURETYPEINFO',
+      this._capabilitiesUrl,
+      name
+    );
+  }
+
+  /**
+   * Returns the complete feature type. If a namespace is specified in the name,
+   * this will be used for matching; otherwise, matching will be done without taking namespaces into account.
+   * @param name Feature type name property (unique in the WFS service)
+   * @return {Promise<WfsFeatureTypeFull>|null} return null if layer was not found or endpoint is not ready
+   */
+  getFeatureTypeFull(name: string, srsName?: string, options?: string) {
     const featureType = this._getFeatureTypeByName(name);
     if (!featureType) return null;
 
@@ -160,7 +196,9 @@ export default class WfsEndpoint {
           undefined,
           undefined,
           false,
-          srsName
+          srsName,
+          undefined,
+          options
         );
 
         const [describeResponse, getFeatureResponse] = await Promise.all([
@@ -348,17 +386,20 @@ export default class WfsEndpoint {
 
 
 async getFeatureTypeName(name: string, typenames: string[], outputFormat?:string, options?: string): Promise<any>{
-  let getFeatureUrl = generateGetFeatureUrl(
+  const getFeatureUrl = generateGetFeatureUrl(
     this._capabilitiesUrl,
     this._version,
     name,
     outputFormat,
     undefined,
     typenames,
-    false
+    false,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    options
   );
-    if (options) getFeatureUrl = getFeatureUrl + options;
-
     return outputFormat != undefined ? sharedFetch(getFeatureUrl, 'GET', true) : queryXmlDocument(getFeatureUrl).then((result) => parseFeatureTypeName(result));
   }
 }

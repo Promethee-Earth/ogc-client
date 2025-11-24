@@ -103,13 +103,20 @@ export function queryXmlDocument(url: string) {
     )
     .then(async (resp: Response) => {
       if (!resp.ok) {
-        const text = await resp.text();
+        let text: string = "";
+        try {
+          text = await resp.text();
+        } catch (err) {
+          // Nothing to do
+          text = "{ inferred reponse content error }";
+        }
         throw new EndpointError(
           `Received an error with code ${resp.status}: ${text}`,
           resp.status,
           false
         );
       }
+
       const buffer = await resp.arrayBuffer();
       const contentTypeHeader = resp.headers.get('Content-Type');
       return decodeString(buffer, contentTypeHeader);

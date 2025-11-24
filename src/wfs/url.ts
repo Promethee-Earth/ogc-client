@@ -28,7 +28,8 @@ export function generateGetFeatureUrl(
   outputCrs?: CrsCode,
   extent?: BoundingBox,
   extentCrs?: CrsCode,
-  startIndex?: number
+  startIndex?: number,
+  options?: string
 ) {
   const typeParam = version === '2.0.0' ? 'TYPENAMES' : 'TYPENAME';
   const countParam = version === '2.0.0' ? 'COUNT' : 'MAXFEATURES';
@@ -41,23 +42,28 @@ export function generateGetFeatureUrl(
   };
   if (outputFormat !== undefined) newParams.OUTPUTFORMAT = outputFormat;
   if (attributes !== undefined) newParams.PROPERTYNAME = attributes.join(',');
+
   if (hitsOnly) {
     newParams.RESULTTYPE = 'hits';
     newParams[countParam] = '1'; // in case the RESULTTYPE param is not supported
   } else if (maxFeatures !== undefined)
     newParams[countParam] = maxFeatures.toString(10);
-  if (outputCrs) {
+  
+  if (outputCrs)
     newParams.SRSNAME = outputCrs;
-  }
+
   if (extent) {
     const extentJoined = extent.join(',');
     newParams.BBOX = extentCrs ? `${extentJoined},${extentCrs}` : extentJoined;
   }
-  if (startIndex) {
+  if (startIndex)
     newParams.STARTINDEX = startIndex.toString(10);
-  }
 
-  return setQueryParams(serviceUrl, newParams);
+  let result = setQueryParams(serviceUrl, newParams);
+
+  if (options) result += options;
+
+  return result;
 }
 
 /**
